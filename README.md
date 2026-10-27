@@ -24,11 +24,14 @@ edge a screen like this really has.
 ## Layout
 
 ```
-CLAUDE.md          playbook for the assistant: how to run this end to end, rules, pitfalls
-docs/METHOD.md     formulas and model definitions
-docs/FINDINGS.md   what the numbers taught us (calibration, tournament math, failure modes)
-quant/             the pipeline (numbered scripts + yf.py / ehist.py / mc.py / mc7.py helper modules)
-quant/extras/      side tools (post-earnings-drift scan, session recap, etc.)
+CLAUDE.md             playbook for the assistant: how to run this end to end, rules, pitfalls
+docs/WORKFLOW.md      the full loop in order, including the manual research and judgment steps
+docs/WORKED_EXAMPLE.md an anonymized end-to-end run and how the answer changed with the constraints
+docs/METHOD.md        formulas and model definitions
+docs/FINDINGS.md      what the numbers taught us (calibration, tournament math, failure modes)
+quant/config.py       every date/window setting in one place (edit this first)
+quant/                the pipeline (numbered scripts + yf.py / ehist.py / mc.py / mc7.py helper modules)
+quant/extras/         side tools (post-earnings-drift scan, session recap, etc.)
 ```
 
 ## Quick start
@@ -36,7 +39,7 @@ quant/extras/      side tools (post-earnings-drift scan, session recap, etc.)
 ```bash
 pip install -r requirements.txt     # numpy only; everything else is stdlib
 cd quant
-# 1) edit the date constants listed in CLAUDE.md ("Dates to update")
+# 1) edit the EDIT block in config.py (as-of date, entry, exit), then `python config.py` to check it
 # 2) run the pipeline
 ./run_all.sh
 ```

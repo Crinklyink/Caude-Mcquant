@@ -1,6 +1,7 @@
 import sys, json, pickle, time, math, urllib.parse, urllib.request, datetime as dt
 sys.path.insert(0,'.')
 import yf, numpy as np
+import config
 from concurrent.futures import ThreadPoolExecutor
 rows=pickle.load(open("rows.pkl","rb"))
 R={r["sym"]:r for r in rows}
@@ -8,7 +9,7 @@ spy63=None
 H=json.load(open("hist.json"))
 # universe selection
 def sel(r):
-    e_in = r["e"] and any("2026-10-27"<=x[0]<="2026-11-09" for x in r["e"])
+    e_in = r["e"] and any(config.WIDE_START<=x[0]<=config.WIDE_END for x in r["e"])
     trend = r["p"]>r["sma200"] and r["p"]>r["sma50"]
     if trend and r["rs63"]>0.10: return True
     if e_in and r["p"]>r["sma200"] and r["pct_hi"]>-0.15 and r["rs63"]>-0.02: return True
@@ -16,8 +17,11 @@ def sel(r):
 extra=set("PLTR TSLA NVDA AMD AVGO MU SMCI IONQ RKLB HOOD COIN MSTR SOFI AFRM UPST APP DKNG CRWD NET SNOW DDOG ZS S OKTA SHOP ROKU U TTD DASH UBER ABNB LYFT PINS SNAP W CVNA CELH ELF ONON DECK LULU NKE FSLR ENPH RUN SEDG PLUG BE OKLO SMR NNE CCJ LEU UEC DNN XOM CVX OXY DVN FANG EOG COP HAL SLB MRO CTRA EQT AR RRC CNX GPOR LNG VST CEG TLN NRG GEV".split())
 extra |= set("LITE COHR ARM ALAB CRDO AXTI TSEM KLAC STX ANET INTC WDC LRCX AMAT CIEN CLS VICR TTMI MRCY VSAT NOK LEGN OKLO LEU RKLB IONQ APP COIN HOOD UPST AFRM FSLY SMCI SOFI CVNA".split())
 def inwin(r):
-    return bool(r["e"]) and any("2026-10-28"<=x[0]<="2026-11-05" for x in r["e"]) and r["atrp"]>0.03 and r["adv"]>30e6
+    return bool(r["e"]) and any(config.WIN_START<=x[0]<=config.WIN_END for x in r["e"]) and r["atrp"]>0.03 and r["adv"]>30e6
 cands=[s for s,r in R.items() if sel(r) or s in extra or inwin(r)]
+# optional: python -I 05_options_engine.py TICK1 TICK2 ...  -> run only these and merge into engine.pkl
+ONLY=[a for a in sys.argv[1:] if a in R]
+if ONLY: cands=ONLY
 print("universe for options:",len(cands))
 def jget(u):
     for k in range(3):
@@ -61,8 +65,8 @@ def work(s):
     q=o["quote"]; spot=q.get("regularMarketPrice")
     exps=o["expirationDates"]
     out["spot"]=spot
-    nov9=int(dt.datetime(2026,11,10,0,0,tzinfo=dt.timezone.utc).timestamp())
-    after=[e for e in exps if e>=nov9]
+    cutoff=config.EXPIRY_CUTOFF_TS   # first expiry on/after the day after EXIT
+    after=[e for e in exps if e>=cutoff]
     if not after: return out
     e1=after[0]
     ch=o if o["options"] and o["options"][0]["expirationDate"]==e1 else chain_at(s,e1)
@@ -75,7 +79,7 @@ def work(s):
         except Exception: pass
     # implied earnings move: first expiry after earnings date
     r=R[s]
-    ed=[x[0] for x in (r["e"] or []) if "2026-10-27"<=x[0]<="2026-11-09"]
+    ed=[x[0] for x in (r["e"] or []) if config.WIDE_START<=x[0]<=config.WIDE_END]
     if ed:
         d0=dt.datetime.strptime(ed[0],"%Y-%m-%d").replace(tzinfo=dt.timezone.utc)
         t0=int((d0+dt.timedelta(days=1)).timestamp())
@@ -90,5 +94,9 @@ with ThreadPoolExecutor(10) as ex:
     for i,o in enumerate(ex.map(work,cands)):
         res[o["sym"]]=o
         if i%50==0: print(i,flush=True)
+if ONLY:
+    try: base=pickle.load(open("engine.pkl","rb"))
+    except Exception: base={}
+    base.update(res); res=base
 pickle.dump(res,open("engine.pkl","wb"))
 print("done",len(res), sum(1 for v in res.values() if v.get("atm")))

@@ -1,9 +1,9 @@
 import sys, json, datetime as dt, numpy as np, warnings, pickle
 warnings.filterwarnings("ignore")
 sys.path.insert(0,'.')
-import yf
+import yf, config
 from math import sqrt
-D0=dt.date(2026,10,28)
+D0=config.ENTRY
 def tdays(d1):
     n=0;d=D0
     while d<=d1:

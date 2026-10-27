@@ -1,12 +1,12 @@
 import sys, json, pickle, datetime as dt, numpy as np, itertools, warnings
 warnings.filterwarnings("ignore")
 sys.path.insert(0,'.')
-import ehist
+import ehist, config
 H=json.load(open("hist.json"))
 pool=pickle.load(open("pool.pkl","rb"))
 S={x["s"]:x for x in pickle.load(open("ranked.pkl","rb"))}
 syms=[p[0] for p in pool]; RD={p[0]:p[1] for p in pool}
-HZ=7
+HZ=config.HZ
 # ---- aligned matrices (last 480 sessions of SPY dates)
 def series(s):
     d=H[s]; return {t:(o,c) for t,o,c in zip(d["t"],d["o"],d["c"]) if o is not None and c is not None}

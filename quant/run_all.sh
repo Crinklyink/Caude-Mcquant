@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run from inside quant/. Edit the date constants listed in CLAUDE.md ("Dates to update") FIRST.
+# Run from inside quant/. Edit the EDIT block in config.py FIRST, then check it with: python config.py
 # Needs: python 3, numpy, outbound HTTPS (Yahoo Finance + Nasdaq endpoints).
 set -euo pipefail
 python -I 01_universe.py          # US stocks > $1B, price > $5  -> univ_all.json
@@ -17,5 +17,5 @@ python -I 12_quality_filter.py    # revisions / event-skew / size filters -> qua
 python -I 13_win_search.py        # best 4-name baskets by P(win) vs a class field
 # Then, for finalists:
 #   python -I 14_term_structure.py TICKER1 TICKER2 ...   (IV by expiry, implied event move)
-#   edit + run 15_final_report.py                         (stops, shares, basket distribution, win odds)
+#   fill the EDIT block in 15_final_report.py, then run it (stops, shares, basket distribution, win odds)
 #   python -I 16_field_winodds.py                         (win odds vs class size / concentration)

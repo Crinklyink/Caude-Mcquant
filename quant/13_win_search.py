@@ -3,7 +3,7 @@ from math import erf, sqrt
 warnings.filterwarnings("ignore")
 syms,cum,EV,RD=pickle.load(open("joint.pkl","rb")); ix={s:i for i,s in enumerate(syms)}
 Q={r[0]:r[1] for r in pickle.load(open("quality.pkl","rb"))}
-R7=(cum[7]-1)[:20000].astype(np.float32)
+R7=(cum[-1]-1)[:20000]   # last day = exit.astype(np.float32)
 grid=np.linspace(-1,3,4001); erfv=np.vectorize(erf)
 def mk(sd): return (0.8*0.5*(1+erfv(grid/sd/sqrt(2)))+0.2*0.5*(1+erfv(grid/(3*sd)/sqrt(2)))).astype(np.float32)
 T5,T8=mk(0.05),mk(0.08)

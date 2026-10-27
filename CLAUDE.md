@@ -2,6 +2,7 @@
 
 This file tells the assistant (Claude) how to reproduce the full workflow: screening, simulation,
 red-teaming, and the final report. Read it before starting. Formulas live in `docs/METHOD.md`;
+the full human-in-the-loop sequence is `docs/WORKFLOW.md`; an anonymized end-to-end run is `docs/WORKED_EXAMPLE.md`;
 lessons and failure modes live in `docs/FINDINGS.md`.
 
 ## 0. Ground rules (do not skip)
@@ -43,7 +44,7 @@ lessons and failure modes live in `docs/FINDINGS.md`.
 | 2 | `02_history.py` | `hist.json` - 2y daily OHLCV for names with price > $5 and avg dollar volume > $25M, plus SPY/QQQ/IWM |
 | 3 | `03_earnings_calendar.py` | `earnings.json` - Nasdaq calendar by day, with AM/PM timing, consensus EPS |
 | 4 | `04_metrics.py` | `rows.pkl` - 20/50/200d trend, 63d relative strength vs SPY, ATR14, 20d dollar volume, 52w-high distance, 10-day base rate, breadth (% above 50/200d, % near highs) |
-| 5 | `05_options_engine.py` | `engine.pkl` - per candidate: ATM straddle at the first expiry on/after the `nov9` cutoff and at the first expiry after the earnings date, call/put volume, quoteSummary (sector, short interest, EPS trend + revisions, insider activity, targets). Candidate set = uptrend/RS names + earnings-in-window names with ATR > 3% + a hand list of volatile extras |
+| 5 | `05_options_engine.py [TICKERS]` | `engine.pkl` (pass tickers to run only those and merge) - per candidate: ATM straddle at the first expiry on/after the day after `EXIT` and at the first expiry after the earnings date, call/put volume, quoteSummary (sector, short interest, EPS trend + revisions, insider activity, targets). Candidate set = uptrend/RS names + earnings-in-window names with ATR > 3% + a hand list of volatile extras |
 | 6 | `06_iv_and_inputs.py` | `scored.pkl` - straddle-implied IV, driftless touch/stop probabilities, target-before-stop odds, factor inputs |
 | 7 | `07_score.py` | `ranked.pkl` - weighted score (see section 4) |
 | 8 | `mc7.py` | `mc7.pkl` - bootstrap Monte Carlo for the entry-to-exit window, earnings jump on its reaction day |
@@ -53,29 +54,34 @@ lessons and failure modes live in `docs/FINDINGS.md`.
 | 12 | `12_quality_filter.py` | `quality.pkl` - flags revisions-down, EPS-falling, negative event skew, tiny size, price >> target |
 | 13 | `13_win_search.py` | ranks 4-name equal-weight baskets by P(finishing first) |
 | 14 | `14_term_structure.py TICKERS...` | IV by expiry (needed for implied event move) |
-| 15 | `15_final_report.py` | stops, share counts, basket distribution, win odds (edit the hard-coded names/IVs) |
+| 15 | `15_final_report.py` | stops, share counts, per-name odds, basket distribution, win odds (fill its EDIT block) |
 | 16 | `16_field_winodds.py` | win odds vs class size and concentration |
 
 `run_all.sh` runs steps 1-13 in order.
 
-## 3. Dates to update before each run
+## 3. Dates: edit `quant/config.py` only
 
-These are hard-coded in the scripts that were written live. Update them for the new window:
+All windows now live in one file. Edit the block marked EDIT, then run `python config.py` to print the derived sessions
+(holidays are handled; verify the holiday list for the year you run):
 
-- `03_earnings_calendar.py` lines 6-7: calendar range (start about 2 weeks before today, end after the exit).
-- `05_options_engine.py`: the `"2026-10-27" <= d <= "2026-11-09"` strings in `sel()`, `inwin()`, and the
-  earnings filter near line 78; `nov9` (line ~64) = first date strictly after the exit.
-- `06_iv_and_inputs.py` line 15 `D0` (first session counted for days-to-expiry) and the window string on line 48.
-- `07_score.py` lines 32-34: catalyst date thresholds (earlier events score higher).
-- `ehist.py` line 41: skip earnings dates after the last completed session (`d > dt.date(...)`).
-- `mc7.py` lines 7-19: `IDX` (session index of each day in the holding window), `TDAYS`, the special-cased
-  entry day, and `HZ` (sessions held). `11_joint_sim.py` also has `HZ`.
-- `14_term_structure.py` line 6 `D0` = first session of the holding window.
-- `15_final_report.py`: ticker list, reaction-day dict `RD`, IV dicts.
+- `AS_OF` - last completed session (price data is as of this close).
+- `ENTRY` / `EXIT` - buy at that session's open / sell at that session's close. `HZ` (sessions held) is derived.
+- `CAL_START` / `CAL_END` - earnings-calendar range (about 2 weeks back for drift scans; a few sessions past `EXIT`).
 
-Reaction-day logic: a "before open" report reacts on its own date; "after close" (or time not
-supplied) reacts the next session. A reaction on the entry day's open is already in the entry price.
-A reaction after the exit date contributes only pre-earnings drift.
+Everything else is derived and used by the scripts: the earnings-of-interest window, the session index of each day in the trade
+(`IDX`), the first option expiry to use (the day after `EXIT`), and the catalyst-score cut-offs. Notes:
+
+- Implied vol is measured in sessions from `ENTRY`, and the touch formula uses `T = HZ/252`. Rerunning with a different window changes
+  the early scores slightly; that is expected.
+- `15_final_report.py` has its own EDIT block: the basket, per-name reaction session `RD`, IVs from `14_term_structure.py`,
+  and the dollar budget.
+- Hand-maintained lists you may want to refresh: the `extra` ticker set in `05_options_engine.py` (volatile names always checked)
+  and the deal-pinned exclusions in `10_pool.py`.
+- `extras/mc_10day_all.py` is a legacy 10-session variant with its own hard-coded session map; do not use it for new windows.
+
+Reaction-day logic: a "before open" report reacts on its own date; "after close" (or time not supplied) reacts the next session.
+A reaction at or before the ENTRY open is already in the entry price; a reaction after the EXIT close contributes only
+pre-earnings drift.
 
 ## 4. Scoring (0-10 each; weights 25/25/25/15/10)
 

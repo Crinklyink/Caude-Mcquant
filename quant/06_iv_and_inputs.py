@@ -1,18 +1,20 @@
-import pickle, math, numpy as np, json, datetime as dt, warnings
+import sys, pickle, math, numpy as np, json, datetime as dt, warnings
+sys.path.insert(0,'.')
+import config
 warnings.filterwarnings("ignore")
 from math import log, sqrt, erf
 rows={r["sym"]:r for r in pickle.load(open("rows.pkl","rb"))}
 res=pickle.load(open("engine.pkl","rb"))
 H=json.load(open("hist.json"))
 def N(x): return 0.5*(1+erf(x/sqrt(2)))
-T=10/252
+T=config.HZ/252
 def tdays(d0,d1):
     n=0;d=d0
     while d<=d1:
         if d.weekday()<5: n+=1
         d+=dt.timedelta(days=1)
     return n
-D0=dt.date(2026,10,27)
+D0=config.ENTRY
 def rvf(s,n):
     c=np.array([x for x in H[s]["c"] if x is not None]); r=np.diff(np.log(c))[-n:]
     return r.std(ddof=1)*sqrt(252)
@@ -45,7 +47,7 @@ for s,o in res.items():
     nsa=qs.get("netSharePurchaseActivity") or {}
     out.append(dict(s=s,p=p,iv=iv,nexp=n,exp=dt.datetime.fromtimestamp(o["e1"],dt.timezone.utc).date().isoformat(),up=up,hold=hold,ps=ps,pfirst=pfirst,up_rv=up_rv,rv20=rv20,rv60=rv60,br=r["br"],atr=atr,atrp=r["atrp"],stop=stop,
         rs63=r["rs63"],hi=r["pct_hi"],d50=p/r["sma50"]-1,d200=p/r["sma200"]-1,r21=r["r21"],ret1=r["ret1"],adv=r["adv"],cap=r["cap"],vr=r["vr"],
-        e=[x for x in (r["e"] or []) if "2026-10-27"<=x[0]<="2026-11-09"],sec=sec,ind=ind,
+        e=[x for x in (r["e"] or []) if config.WIDE_START<=x[0]<=config.WIDE_END],sec=sec,ind=ind,
         spf=raw(ks.get("shortPercentOfFloat")),dtc=raw(ks.get("shortRatio")),
         eps_now=raw(ept.get("current")),eps7=raw(ept.get("7daysAgo")),eps30=raw(ept.get("30daysAgo")),eps90=raw(ept.get("90daysAgo")),
         upr=raw(rev.get("upLast30days")),dnr=raw(rev.get("downLast30days")),nan=raw((q0.get("earningsEstimate") or {}).get("numberOfAnalysts")),

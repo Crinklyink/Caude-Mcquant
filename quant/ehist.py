@@ -1,7 +1,7 @@
 import sys, json, urllib.parse, urllib.request, datetime as dt, numpy as np, warnings
 warnings.filterwarnings("ignore")
 sys.path.insert(0,'.')
-import yf
+import yf, config
 H=json.load(open("hist.json"))
 def clean(s):
     d=H[s]; idx=[i for i,x in enumerate(d["c"]) if x is not None]
@@ -38,7 +38,7 @@ def moves(sym,n=8):
     for d,sp in nasdaq_dates(sym): ds[d]=sp
     res=[]
     for d in sorted(ds,reverse=True):
-        if d>dt.date(2026,10,26): continue
+        if d>config.AS_OF: continue   # ignore reports after the last completed session
         if d<T[0]+dt.timedelta(days=3): continue
         # locate index of d (or next trading day)
         i=next((k for k,x in enumerate(T) if x>=d),None)

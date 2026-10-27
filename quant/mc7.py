@@ -1,13 +1,14 @@
 import sys, json, pickle, datetime as dt, numpy as np, warnings
 warnings.filterwarnings("ignore")
 sys.path.insert(0,'.')
-import ehist, mc
+import ehist, mc, config
 from concurrent.futures import ThreadPoolExecutor
-HZ=7
-IDX={"2026-10-28":1,"2026-10-29":2,"2026-10-30":3,"2026-11-02":4,"2026-11-03":5,"2026-11-04":6,"2026-11-05":7}
-TDAYS=["2026-10-27","2026-10-28","2026-10-29","2026-10-30","2026-11-02","2026-11-03","2026-11-04","2026-11-05","2026-11-06","2026-11-09"]
+HZ=config.HZ            # sessions held
+IDX=config.IDX          # session -> day inside the trade (1 = entry day)
+TDAYS=config.TDAYS      # sessions used to classify earnings dates
+ENTRY_S=config.ENTRY.isoformat()
 def rd7(x):
-    """reaction day index inside the Oct28-Nov5 window; None if before/at entry or after exit"""
+    """reaction day index inside the holding window; None if before/at entry or after exit"""
     if not x["e"]: return None,"none"
     d,tm=x["e"][0][0],x["e"][0][1]
     if d not in TDAYS: return None,"none"
@@ -15,10 +16,10 @@ def rd7(x):
     ri = i if "pre" in tm else i+1   # index into TDAYS of reaction day
     if ri>=len(TDAYS): return None,"after"
     rdate=TDAYS[ri]
-    if rdate=="2026-10-27": return None,"before"
-    if rdate=="2026-10-28": return None,"atopen"   # reaction is the entry-open gap
+    if rdate<ENTRY_S: return None,"before"
+    if rdate==ENTRY_S: return None,"atopen"   # reaction is the entry-open gap (already in your entry price)
     if rdate in IDX: return IDX[rdate],"in"
-    return None,"after"   # Nov 6 or later
+    return None,"after"   # reaction after the exit close
 CACHE={}
 def moves(s):
     if s not in CACHE: CACHE[s]=ehist.moves(s,10)

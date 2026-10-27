@@ -1,4 +1,6 @@
-import pickle, numpy as np, warnings
+import sys, pickle, numpy as np, warnings
+sys.path.insert(0,'.')
+import config
 warnings.filterwarnings("ignore")
 S=pickle.load(open("scored.pkl","rb"))
 def pr(vals):
@@ -29,9 +31,9 @@ for i,x in enumerate(S):
     if x["e"]:
         d=x["e"][0][0]
         c=6
-        if d<="2026-11-05": c=7
-        if d<="2026-10-30": c=8
-        if d>="2026-11-06": c=4.5   # little room, hold risk
+        if d<=config.CAT_MID: c=7
+        if d<=config.CAT_EARLY: c=8
+        if d>=config.CAT_LATE: c=4.5   # little room, hold risk
     x["cat"]=c
     # positioning
     pz=4

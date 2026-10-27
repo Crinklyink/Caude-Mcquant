@@ -6,7 +6,7 @@ erfv=np.vectorize(erf)
 def Phi(x): return 0.5*(1+erfv(x/sqrt(2)))
 def R7(names,w):
     c=[ix[n] for n in names]; w=np.array(w,float); w/=w.sum()
-    return (cum[7][:,c]-1)@w
+    return (cum[-1][:,c]-1)@w   # last day = exit
 strats={
  "A current 4 (AXTI/FSLY/PLTR/W eq)":(["AXTI","FSLY","PLTR","W"],[1,1,1,1]),
  "B top-vol 4 (AXTI/FSLY/GRAL/LEU eq)":(["AXTI","FSLY","GRAL","LEU"],[1,1,1,1]),

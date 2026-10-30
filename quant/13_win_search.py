@@ -1,7 +1,8 @@
 """Best 4-name equal-dollar baskets by P(finishing first), under the selection rules:
 quality filter passed (12), fewer than 2 red-team flags (12b), at most one name per industry.
 Also prints the best baskets ignoring the rules, so you can see what the rules cost.
-Set QUANT_PREV=AAA,BBB,CCC,DDD to score the previous pick for comparison. Writes win5.pkl (rule-following baskets).
+Set QUANT_PREV=AAA,BBB,CCC,DDD to score the previous pick for comparison, and QUANT_EXCLUDE=AAA,BBB to drop names
+the manual checks cut (pre-announced quarter, deal pending, unconfirmed date...). Writes win5.pkl (rule-following baskets).
 """
 import os, pickle, itertools, numpy as np, warnings
 from math import erf, sqrt
@@ -22,8 +23,9 @@ def show(r,tag=""):
 tail=lambda s: np.mean(R7[:,ix[s]]>=.15)   # single-name upside tail, used to keep the search tractable
 
 quality=[s for s in syms if not Q.get(s)]
-elig=[s for s in quality if s in RT and len(RT[s]["flags"])<2]
-print("quality-passing:",len(quality),"| also <2 red-team flags:",len(elig))
+manual=[s for s in os.environ.get("QUANT_EXCLUDE","").split(",") if s]
+elig=[s for s in quality if s in RT and len(RT[s]["flags"])<2 and s not in manual]
+print("quality-passing:",len(quality),"| also <2 red-team flags and not excluded by hand:",len(elig),"| excluded by hand:",manual)
 print("cut by red team:",{s:RT[s]["flags"] for s in quality if s in RT and len(RT[s]["flags"])>=2})
 top=sorted(elig,key=lambda s:-tail(s))[:30]
 ind={s:RT[s]["ind"] for s in top}

@@ -46,6 +46,10 @@ For a contest where only first place pays:
 - **Daily results are noise.** A basket up 5% one day is a coin flip landing. Say so.
 - **Silent data gaps.** One run's earnings-history fetch failed for a single stock and returned nothing, so the simulation
   gave it no earnings jump and it fell down the ranking. `ehist.py` now retries and prints `WARN ehist` instead.
+- **Silent option-chain failures.** With 10 threads, about 5% of option-chain requests failed per run (a different set each
+  time), and `06_iv_and_inputs.py` skips any stock without a chain. One run lost the top-ranked name that way and the pick
+  changed for no real reason. `05_options_engine.py` now retries each request, makes a gentler second pass, and prints
+  `WARN options` for anything still missing (626 of 634 names covered instead of 597).
 - **Partial bars.** A run started after the open picked up today's half-finished bar as if it were a close. `02_history.py`
   now trims bars after `AS_OF`, and `predict.py` stops if the history does not end at `AS_OF`.
 - **Raw pre-market gaps over-flag.** On a day the Nasdaq-100 was down 2% pre-market, a flat 5% gap rule flagged high-beta

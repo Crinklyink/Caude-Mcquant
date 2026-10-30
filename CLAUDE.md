@@ -53,7 +53,7 @@ lessons and failure modes live in `docs/FINDINGS.md`.
 | 11 | `11_joint_sim.py` | `joint.pkl` - correlated simulation (shared historical dates across names; independent earnings jumps) |
 | 12 | `12_quality_filter.py` | `quality.pkl` - flags revisions-down, EPS-falling, negative event skew, tiny size, price >> target |
 | 12b | `12b_redteam.py` | `redteam.pkl` - red-team flags A-E and N for every pool name (section 6), industry, latest extended-hours price, implied vs historical event move |
-| 13 | `13_win_search.py` | ranks 4-name equal-weight baskets by P(finishing first) under the rules: quality passed, < 2 red-team flags, one per industry; ties within 0.5 pt go to the fewest flags. Also prints the best baskets ignoring the rules. `QUANT_PREV=A,B,C,D` scores a previous pick |
+| 13 | `13_win_search.py` | ranks 4-name equal-weight baskets by P(finishing first) under the rules: quality passed, < 2 red-team flags, one per industry; ties within 0.5 pt go to the fewest flags. Also prints the best baskets ignoring the rules. `QUANT_PREV=A,B,C,D` scores a previous pick; `QUANT_EXCLUDE=A,B` drops names the manual checks cut |
 | 14 | `14_term_structure.py TICKERS...` | IV by expiry (needed for implied event move) |
 | 15 | `15_final_report.py` | stops, share counts, per-name odds, basket distribution, win odds for a basket you choose (fill its EDIT block) |
 | 16 | `16_field_winodds.py` | win odds vs class size and concentration |
@@ -130,10 +130,13 @@ price the event (no expiry covers it, or the estimate needs an assumed baseline 
 thesis survives an explicit argument.
 
 `12b_redteam.py` computes A-E and N for every pool name and `13_win_search.py` applies the cut, so the pick is reproducible.
-The checks below still need searches by hand, and so does any big move flagged E:
+The checks below still need searches by hand, and so does any big move flagged E. Search each name in the answer card;
+if one fails, re-run with `QUANT_EXCLUDE=SYM python -I predict.py --exit ... --from 13` and say why it was cut:
 
 - **Read-through**: if a peer beat big and still fell (refiners after a strong report), the beat is priced in.
-- **Pre-announced results** (company issued a preliminary update): the event is priced in.
+- **Pre-announced results** (company issued a preliminary update): the event is priced in. Example: a server maker
+  pre-announced revenue far above guidance two weeks before its report; it came out of the search as a zero-flag pick and
+  had to be excluded by hand.
 - **Deal-pinned stocks** (very low ATR/IV after a huge run, price near a target): likely pending acquisitions - exclude.
 - **Unconfirmed dates**: if the company has not announced the report date, say so and name a backup.
 - **Negative earnings skew**: most past reactions down, or a strongly negative mean reaction.

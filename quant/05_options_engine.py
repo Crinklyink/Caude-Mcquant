@@ -36,14 +36,14 @@ def qsum(s):
     except Exception: return None
 def raw(x): 
     return x.get("raw") if isinstance(x,dict) else x
-def opts(s):
-    try:
-        o=yf.options(s)
-    except Exception: return None
-    return o
-def chain_at(s,exp):
-    try: return yf.options(s,exp)
-    except Exception: return None
+def retry(f,*a,k=3):
+    # a failed chain used to drop the stock from every later step without a word; retry with backoff
+    for i in range(k):
+        try: return f(*a)
+        except Exception: time.sleep(1.0+i)
+    return None
+def opts(s): return retry(yf.options,s)
+def chain_at(s,exp): return retry(yf.options,s,exp)
 def atm(ch,spot):
     c=ch["options"][0]["calls"]; p=ch["options"][0]["puts"]
     if not c or not p: return None
@@ -94,6 +94,15 @@ with ThreadPoolExecutor(10) as ex:
     for i,o in enumerate(ex.map(work,cands)):
         res[o["sym"]]=o
         if i%50==0: print(i,flush=True)
+# second pass, gentler, for names whose chain never came back (often rate limiting under 10 threads)
+miss=[s for s in cands if not res[s].get("spot")]
+if miss:
+    time.sleep(5)
+    with ThreadPoolExecutor(3) as ex:
+        for o in ex.map(work,miss): res[o["sym"]]=o
+    still=[s for s in miss if not res[s].get("spot")]
+    print(f"retry pass: {len(miss)} without a chain, {len(miss)-len(still)} recovered")
+    if still: print(f"WARN options: no chain for {len(still)} names (dropped from later steps): {' '.join(still[:40])}",file=sys.stderr)
 if ONLY:
     try: base=pickle.load(open("engine.pkl","rb"))
     except Exception: base={}

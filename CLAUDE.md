@@ -52,16 +52,26 @@ lessons and failure modes live in `docs/FINDINGS.md`.
 | 10 | `10_pool.py` | `pool.pkl` - tournament candidates: event inside window, MC touch >= 55%, ADV >= $40M, price >= $7, no deal-pinned names |
 | 11 | `11_joint_sim.py` | `joint.pkl` - correlated simulation (shared historical dates across names; independent earnings jumps) |
 | 12 | `12_quality_filter.py` | `quality.pkl` - flags revisions-down, EPS-falling, negative event skew, tiny size, price >> target |
-| 13 | `13_win_search.py` | ranks 4-name equal-weight baskets by P(finishing first) |
+| 12b | `12b_redteam.py` | `redteam.pkl` - red-team flags A-E and N for every pool name (section 6), industry, latest extended-hours price, implied vs historical event move |
+| 13 | `13_win_search.py` | ranks 4-name equal-weight baskets by P(finishing first) under the rules: quality passed, < 2 red-team flags, one per industry; ties within 0.5 pt go to the fewest flags. Also prints the best baskets ignoring the rules. `QUANT_PREV=A,B,C,D` scores a previous pick |
 | 14 | `14_term_structure.py TICKERS...` | IV by expiry (needed for implied event move) |
-| 15 | `15_final_report.py` | stops, share counts, per-name odds, basket distribution, win odds (fill its EDIT block) |
+| 15 | `15_final_report.py` | stops, share counts, per-name odds, basket distribution, win odds for a basket you choose (fill its EDIT block) |
 | 16 | `16_field_winodds.py` | win odds vs class size and concentration |
+| 17 | `17_today.py` | `today.json` - the answer card for the pick from 13: latest price, shares, report dates, implied vs past move, touch odds, stops, basket percentiles, P(win), close alternatives, cut list |
 
-`run_all.sh` runs steps 1-13 in order.
+**One command:** `python -I predict.py --exit YYYY-MM-DD` picks `AS_OF` / `ENTRY` from the clock (section 3), runs steps
+1-13 plus 12b and 17, stops if the price history does not end at `AS_OF`, and prints the answer card. `--from 12b` reuses the
+downloaded data and redoes the later steps; `--dry-run` prints the dates only. Full output goes to `predict.log`.
+`run_all.sh` is the manual route (dates from the `config.py` EDIT block).
 
-## 3. Dates: edit `quant/config.py` only
+## 3. Dates: `predict.py` picks them, or edit `quant/config.py`
 
-All windows now live in one file. Edit the block marked EDIT, then run `python config.py` to print the derived sessions
+`predict.py` sets the dates from the US Eastern clock and passes them to every script (`QUANT_AS_OF` / `QUANT_ENTRY` /
+`QUANT_EXIT`, which override the EDIT block): before 9:30 on a trading day it buys at today's open with data through the
+previous close; after 16:10 it uses today's close and buys at the next open; during the session it uses the previous close
+and buys at the NEXT open (it says so). Early-close days are not handled.
+
+For the manual route, all windows live in one file. Edit the block marked EDIT, then run `python config.py` to print the derived sessions
 (holidays are handled; verify the holiday list for the year you run):
 
 - `AS_OF` - last completed session (price data is as of this close).
@@ -114,8 +124,13 @@ Top ~8 carry forward, but collapse same-factor duplicates (five oil names are on
 
 Flag each finalist on: **A** run-up into the event (+20% in 21 days, or a big jump on light volume),
 **B** crowded positioning (call/put volume > 3:1, very high short interest with calls bought), **C** implied
-earnings move > 25% above its history, **D** price above the consensus target. Two or more flags = cut, unless the
-thesis survives an explicit argument. Also check:
+earnings move > 25% above its history, **D** price above the consensus target, **E** an extended-hours move of 5%+
+beyond what the Nasdaq-100 move explains (60-day beta to QQQ) before the stock's own report, **N** options that cannot
+price the event (no expiry covers it, or the estimate needs an assumed baseline vol). Two or more flags = cut, unless the
+thesis survives an explicit argument.
+
+`12b_redteam.py` computes A-E and N for every pool name and `13_win_search.py` applies the cut, so the pick is reproducible.
+The checks below still need searches by hand, and so does any big move flagged E:
 
 - **Read-through**: if a peer beat big and still fell (refiners after a strong report), the beat is priced in.
 - **Pre-announced results** (company issued a preliminary update): the event is priced in.
@@ -129,7 +144,11 @@ Quality filter (`12_quality_filter.py`): down-revisions > up-revisions, EPS esti
 
 ## 7. Selection rules
 
-- Max 1 pick per sector; the picks must not all hinge on the same event. State correlations.
+- Max 1 pick per industry (Yahoo industry; `13_win_search.py` enforces it); the picks must not all hinge on the same event.
+  State correlations.
+- Baskets within about 0.5 point of P(win) are a tie (simulation noise). Break ties by data quality (fewer red-team flags,
+  confirmed dates), not by the decimal. Expect the same names to repeat between runs: dates and volatility change slowly, and
+  the pick should change only when something real happens (a report lands, a date moves, a flag appears).
 - Fewer picks than requested is fine - never pad.
 - If the user needs exactly N stocks at equal dollars, honor it (whole shares, never over the cap).
 - **Tournament mode** (contest, only first place pays): variance is the lever, and the downside mirrors the upside.
@@ -151,6 +170,11 @@ Link sources inline and give each number a date.
 
 ## 9. After-the-fact refresh
 
-After the close, rerun with fresh bars (`02_history.py`), recompute the pool and baskets, and report: how the
+After the close, rerun with fresh bars (`python -I predict.py --exit ...` does it all), and report: how the
 picks did that day (flag it as a coin flip, not skill), after-hours moves of the picks and of names that report
 tonight (`extras/session_recap.py`), and any date confirmations that arrived.
+
+A stock whose earnings reaction lands at the next open drops out of a fresh pick (the gap is already in the entry price).
+Someone who already holds it should usually keep holding: selling does not undo a loss, and in a winner-take-all contest
+cash cannot win. If the user only wants "the prediction for today", lead with the answer card in a few lines and skip
+the long format unless they ask.

@@ -1,4 +1,4 @@
-import sys, json, urllib.parse, urllib.request, datetime as dt, numpy as np, warnings
+import sys, json, time, urllib.parse, urllib.request, datetime as dt, numpy as np, warnings
 warnings.filterwarnings("ignore")
 sys.path.insert(0,'.')
 import yf, config
@@ -27,15 +27,24 @@ def nasdaq_dates(sym):
             m,d,y=map(int,r["dateReported"].split("/")); out.append((dt.date(y,m,d),r.get("percentageSurprise")))
         return out
     except Exception: return []
+def retry(f,sym,k=3):
+    # both sources return [] on any error; retry so a transient failure does not drop a stock's history
+    for i in range(k):
+        r=f(sym)
+        if r: return r
+        time.sleep(1+i)
+    return []
 def moves(sym,n=8):
     P=clean(sym); T=P["t"]; C=P["c"]; O=P["o"]
     ds={}
-    for r in yahoo_dates(sym):
+    yd,nd=retry(yahoo_dates,sym),retry(nasdaq_dates,sym)
+    if not yd and not nd: print(f"WARN ehist: no earnings dates for {sym}",file=sys.stderr)
+    for r in yd:
         try:
             d=dt.datetime.fromisoformat(r["startdatetime"].replace("Z","+00:00")).astimezone(dt.timezone(dt.timedelta(hours=-4))).date()
             ds[d]=r.get("epssurprisepct")
         except Exception: pass
-    for d,sp in nasdaq_dates(sym): ds[d]=sp
+    for d,sp in nd: ds[d]=sp
     res=[]
     for d in sorted(ds,reverse=True):
         if d>config.AS_OF: continue   # ignore reports after the last completed session

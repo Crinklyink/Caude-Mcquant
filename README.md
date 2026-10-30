@@ -18,8 +18,10 @@ edge a screen like this really has.
 4. Cross-checks with (a) a historical base rate, (b) a bootstrap Monte Carlo that treats the
    earnings jump as a dated event, and (c) the stock's own past earnings reactions.
 5. Scores candidates (catalyst / revisions / technicals / positioning / macro), applies a
-   red-team checklist and quality filters, and searches 4-stock baskets by simulated
-   "probability of finishing first in a class of N".
+   red-team checklist (computed, not hand-ticked) and quality filters, and searches 4-stock baskets
+   (one per industry) by simulated "probability of finishing first in a class of N".
+6. Prints a short answer card: the four stocks priced at the latest trade, share counts, report
+   dates, odds, close alternatives and what the red team cut.
 
 ## Layout
 
@@ -39,12 +41,17 @@ quant/extras/         side tools (post-earnings-drift scan, session recap, etc.)
 ```bash
 pip install -r requirements.txt     # numpy only; everything else is stdlib
 cd quant
-# 1) edit the EDIT block in config.py (as-of date, entry, exit), then `python config.py` to check it
-# 2) run the pipeline
-./run_all.sh
+# buy at the next open, sell at the close of the --exit session; dates come from the clock
+python -I predict.py --exit 2026-11-05
 ```
 
-Scripts read and write their data files (`*.json`, `*.pkl`) in the current directory, so run them
+That runs the whole pipeline (a few minutes) and prints the answer card; the card is also saved to
+`today.json` and the full output to `predict.log`. `--dry-run` shows the dates it would use, and
+`--from 12b` redoes only the later steps on data already downloaded.
+
+Manual route: edit the EDIT block in `config.py`, check it with `python config.py`, then `./run_all.sh`.
+
+Scripts read and write their data files (`*.json`, `*.pkl`, `*.log`) in the current directory, so run them
 from `quant/`. Those files are git-ignored.
 
 ## Data sources and caveats

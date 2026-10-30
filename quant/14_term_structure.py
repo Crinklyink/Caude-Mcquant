@@ -4,17 +4,13 @@ sys.path.insert(0,'.')
 import yf, config
 from math import sqrt
 D0=config.ENTRY
-def tdays(d1):
-    n=0;d=D0
-    while d<=d1:
-        if d.weekday()<5: n+=1
-        d+=dt.timedelta(days=1)
-    return n
+def tdays(d1): return len(config.sessions(D0,d1))   # sessions ENTRY -> expiry, holidays excluded
 def mid(x):
     b,a=x.get("bid") or 0,x.get("ask") or 0
     if b>0 and a>0 and a<=b*1.6+0.05: return (b+a)/2,"m"
     return (x.get("lastPrice") or 0),"l"
-def term(sym,maxd=dt.date(2026,12,5)):
+def term(sym,maxd=None):
+    maxd=maxd or config.EXIT+dt.timedelta(days=40)
     o=yf.options(sym); spot=o["quote"]["regularMarketPrice"]
     res=[]
     for e in o["expirationDates"]:

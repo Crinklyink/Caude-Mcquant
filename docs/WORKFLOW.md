@@ -20,11 +20,14 @@ restate the constraint and rebuild; do not quietly reuse the old answer.
 
 ## 1. Configure and run
 
-1. Edit the EDIT block in `quant/config.py` (`AS_OF`, `ENTRY`, `EXIT`, `CAL_START`, `CAL_END`). Run `python config.py` and check the
-   printed `HOLD` sessions and `HZ` look right (holidays included).
-2. `cd quant && ./run_all.sh` (about 10-20 minutes; steps 2 and 5 are the slow ones).
-3. Sanity-check outputs before reading any results: the last SPY bar date equals `AS_OF`; the universe is ~1,700 names;
-   the options step reports hundreds of names with ATM data; `mc7` reports 0 errors.
+1. `cd quant && python -I predict.py --exit YYYY-MM-DD --dry-run` and check the dates it prints (data through which close,
+   buy at which open, sell at which close). Then run it without `--dry-run` (a few minutes; steps 2 and 5 are the slow ones).
+   Manual route: edit the EDIT block in `quant/config.py`, check it with `python config.py`, then `./run_all.sh`.
+2. Sanity-check outputs before reading any results (`predict.log`): the last SPY bar date equals `AS_OF` (`predict.py` stops if
+   not); the universe is ~1,700 names; the options step reports hundreds of names with ATM data; no `WARN ehist` lines (a stock
+   with no earnings history gets no earnings jump in the simulation).
+3. Read the answer card, then do the manual checks it lists: each report date in the company's own release, and the news behind
+   any big move.
 
 ## 2. Regime (one paragraph)
 
@@ -63,9 +66,12 @@ When two sources disagree, say so and give both. Never fill a gap from memory.
 
 ## 5. Quant check and red team
 
-- `14_term_structure.py TICKERS...` for IV by expiry; copy into the EDIT block of `15_final_report.py`.
-- Compare implied vs historical earnings move; compare formula, Monte Carlo and base rate (they will not agree - the formula runs high).
-- Apply the red-team flags (run-up, crowded, implied > history, above target) and the quality filter. Two flags = cut unless you can defend it.
+- `12b_redteam.py` computes IV by expiry, the implied vs historical earnings move and flags A-E, N for the whole pool;
+  `17_today.py` prints them for the pick. For a basket you choose yourself, use `14_term_structure.py` and the EDIT block of
+  `15_final_report.py`.
+- Compare formula, Monte Carlo and base rate (they will not agree - the formula runs high).
+- The search already cuts names with two or more flags and keeps one name per industry. Check the cut list and the single flags
+  by hand: a flag can be a data artifact (thin pre-market trades, stale option quotes when the market is closed).
 - Write the cut list as you go, one line each, with the reason.
 
 ## 6. Contest mode (only if a contest was stated)

@@ -1,7 +1,8 @@
-import json, sys, time
+import json, sys, time, datetime as dt
 sys.path.insert(0,'.')
-import yf
+import yf, config
 from concurrent.futures import ThreadPoolExecutor
+CUT=config.AS_OF.isoformat()
 U=json.load(open("univ_all.json"))
 syms=[]
 for q in U:
@@ -15,7 +16,10 @@ def one(s):
         try:
             r=yf.chart(s,"2y","1d")
             ts=r["timestamp"]; qd=r["indicators"]["quote"][0]
-            return s,{"t":ts,"o":qd["open"],"h":qd["high"],"l":qd["low"],"c":qd["close"],"v":qd["volume"]}
+            # drop any bar after AS_OF (a partial pre-market/intraday bar for today)
+            k=[i for i,x in enumerate(ts) if dt.datetime.fromtimestamp(x,dt.timezone.utc).date().isoformat()<=CUT]
+            g=lambda a:[a[i] for i in k]
+            return s,{"t":g(ts),"o":g(qd["open"]),"h":g(qd["high"]),"l":g(qd["low"]),"c":g(qd["close"]),"v":g(qd["volume"])}
         except Exception as e:
             time.sleep(1+k)
     return s,None

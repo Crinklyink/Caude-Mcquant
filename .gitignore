@@ -1,6 +1,7 @@
 # data produced by the pipeline (large / regenerated)
 *.json
 *.pkl
+*.log
 __pycache__/
 *.pyc
 .env

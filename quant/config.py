@@ -14,12 +14,22 @@ close contributes nothing but pre-earnings drift (see mc7.rd7).
 import datetime as dt
 
 # ============================== EDIT ==============================
-AS_OF = dt.date(2026, 10, 27)       # last completed session
-ENTRY = dt.date(2026, 10, 28)       # buy at the open of this session
+AS_OF = dt.date(2026, 10, 29)       # last completed session (final close)
+ENTRY = dt.date(2026, 10, 30)       # buy at the open of this session
 EXIT = dt.date(2026, 11, 5)         # sell at the close of this session
-CAL_START = dt.date(2026, 10, 12)   # earnings-calendar start (about 2 weeks back, for post-earnings-drift scans)
-CAL_END = dt.date(2026, 11, 9)      # earnings-calendar end (a few sessions past EXIT)
+CAL_START = dt.date(2026, 10, 13)   # earnings-calendar start (about 2 weeks back, for post-earnings-drift scans)
+CAL_END = dt.date(2026, 11, 10)     # earnings-calendar end (a few sessions past EXIT)
 # ==================================================================
+
+# predict.py picks the dates from the clock and passes them in; they override the block above.
+import os
+def _env_date(key, default):
+    v = os.environ.get(key)
+    return dt.date.fromisoformat(v) if v else default
+if os.environ.get("QUANT_AS_OF"):
+    AS_OF, ENTRY, EXIT = _env_date("QUANT_AS_OF", AS_OF), _env_date("QUANT_ENTRY", ENTRY), _env_date("QUANT_EXIT", EXIT)
+    CAL_START = AS_OF - dt.timedelta(days=16)
+    CAL_END = EXIT + dt.timedelta(days=5)
 
 # NYSE full-day closures. Verify against the official NYSE calendar for the year you run.
 US_MARKET_HOLIDAYS = {

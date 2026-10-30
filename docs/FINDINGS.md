@@ -44,9 +44,19 @@ For a contest where only first place pays:
 - **Stale or thin quotes.** Pre-market option quotes are empty; last trades can be hours old. IV from 30-contract expiries is noisy.
 - **Search noise.** Aggregators, mirror sites and auto-generated pages disagree; prefer company releases, SEC 8-Ks, and wire copies.
 - **Daily results are noise.** A basket up 5% one day is a coin flip landing. Say so.
+- **Silent data gaps.** One run's earnings-history fetch failed for a single stock and returned nothing, so the simulation
+  gave it no earnings jump and it fell down the ranking. `ehist.py` now retries and prints `WARN ehist` instead.
+- **Partial bars.** A run started after the open picked up today's half-finished bar as if it were a close. `02_history.py`
+  now trims bars after `AS_OF`, and `predict.py` stops if the history does not end at `AS_OF`.
+- **Raw pre-market gaps over-flag.** On a day the Nasdaq-100 was down 2% pre-market, a flat 5% gap rule flagged high-beta
+  names whose moves were just the market. Flag E now measures the move beyond beta x QQQ.
+- **Repeat picks are expected.** Users expect a "new prediction" to name new stocks. Picks key off fixed report dates and
+  slow-moving volatility, so the same names repeat until a report lands or a flag appears; the top baskets are often within
+  half a point of each other, which is noise.
 
 ## 5. What was not validated
 
 - No out-of-sample backtest of the ranking itself; the score weights and sub-score heuristics are judgment.
+- The red-team thresholds (20% run-up, 3:1 calls, 1.25x implied move, 5% excess move) are judgment too, not fitted.
 - Event moves are drawn from ~5-10 past reactions per name, so tails are uncertain.
 - The class-field model is an assumption.

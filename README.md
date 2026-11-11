@@ -56,9 +56,10 @@ from `quant/`. Those files are git-ignored.
 
 ## Data sources and caveats
 
-- Yahoo Finance chart / options / quoteSummary endpoints (unofficial, cookie + crumb) and the Nasdaq
-  earnings-calendar API (unofficial). They can change or rate-limit without notice; check their terms
-  before relying on them.
+- Yahoo Finance chart / options / quoteSummary / earnings-calendar endpoints (unofficial, cookie + crumb) and the
+  Nasdaq earnings-calendar API (unofficial). They can change, rate-limit or block scripts without notice (Nasdaq
+  began answering 403 in Nov 2026; the calendar step then falls back to Yahoo and stops the run if neither source
+  has dates for the trade window). Check their terms before relying on them.
 - Option quotes are only good when the market is open. Outside hours bid/ask is empty and the
   pipeline falls back to last trades, so IV is approximate.
 - Earnings dates from calendars can be estimates. Confirm with the company's own announcement.

@@ -29,7 +29,9 @@ lessons and failure modes live in `docs/FINDINGS.md`.
 
 ## 1. Setup
 
-- Python 3 + numpy; outbound HTTPS to Yahoo Finance and `api.nasdaq.com`.
+- Python 3 + numpy; outbound HTTPS to Yahoo Finance and `api.nasdaq.com` (optional since Nov 2026: Nasdaq answers
+  scripts with HTTP 403, and the calendar and earnings-history code fall back to Yahoo; look for `WARN calendar` /
+  `WARN ehist` lines).
 - Run scripts from `quant/` with `python -I script.py` (isolated mode; scripts add `.` to `sys.path`
   themselves to import `yf`, `ehist`, `mc`, `mc7`).
 - Data files (`*.json`, `*.pkl`) are written to the current directory and are git-ignored.
@@ -42,14 +44,14 @@ lessons and failure modes live in `docs/FINDINGS.md`.
 |---|---|---|
 | 1 | `01_universe.py` | `univ_all.json` - US stocks > $1B, price > $5, avg volume > 500k (Yahoo screener, paged) |
 | 2 | `02_history.py` | `hist.json` - 2y daily OHLCV for names with price > $5 and avg dollar volume > $25M, plus SPY/QQQ/IWM |
-| 3 | `03_earnings_calendar.py` | `earnings.json` - Nasdaq calendar by day, with AM/PM timing, consensus EPS |
+| 3 | `03_earnings_calendar.py` | `earnings.json` - earnings calendar by day, with AM/PM timing and consensus EPS: Nasdaq, else Yahoo per day (a 403 switches to Yahoo for the rest of the run). Exits non-zero if no source has dates for the trade window |
 | 4 | `04_metrics.py` | `rows.pkl` - 20/50/200d trend, 63d relative strength vs SPY, ATR14, 20d dollar volume, 52w-high distance, 10-day base rate, breadth (% above 50/200d, % near highs) |
 | 5 | `05_options_engine.py [TICKERS]` | `engine.pkl` (pass tickers to run only those and merge) - per candidate: ATM straddle at the first expiry on/after the day after `EXIT` and at the first expiry after the earnings date, call/put volume, quoteSummary (sector, short interest, EPS trend + revisions, insider activity, targets). Candidate set = uptrend/RS names + earnings-in-window names with ATR > 3% + a hand list of volatile extras |
 | 6 | `06_iv_and_inputs.py` | `scored.pkl` - straddle-implied IV, driftless touch/stop probabilities, target-before-stop odds, factor inputs |
 | 7 | `07_score.py` | `ranked.pkl` - weighted score (see section 4) |
 | 8 | `mc7.py` | `mc7.pkl` - bootstrap Monte Carlo for the entry-to-exit window, earnings jump on its reaction day |
 | 9 | `09_rank_window.py` | `rank7.pkl` - re-scores the catalyst for the exact holding window |
-| 10 | `10_pool.py` | `pool.pkl` - tournament candidates: event inside window, MC touch >= 55%, ADV >= $40M, price >= $7, no deal-pinned names |
+| 10 | `10_pool.py` | `pool.pkl` - tournament candidates: event inside window, MC touch >= 55%, ADV >= $40M, price >= $7, no deal-pinned names. An empty pool prints `WARN pool` with the reason (no reports in the window, or none reaching the touch bar - usual for 1-3 session windows) |
 | 11 | `11_joint_sim.py` | `joint.pkl` - correlated simulation (shared historical dates across names; independent earnings jumps) |
 | 12 | `12_quality_filter.py` | `quality.pkl` - flags revisions-down, EPS-falling, negative event skew, tiny size, price >> target |
 | 12b | `12b_redteam.py` | `redteam.pkl` - red-team flags A-E and N for every pool name (section 6), industry, latest extended-hours price, implied vs historical event move |

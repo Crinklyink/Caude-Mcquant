@@ -33,9 +33,11 @@ Using two expiries (the one just before the event as the "normal" baseline, the 
 Compare with the stock's average absolute earnings-day move over its last ~8 reports:
 implied < historical = possibly underpriced; implied > historical = already priced in.
 
-Historical reactions: report dates come from the Nasdaq earnings-surprise endpoint (last 4 quarters) and Yahoo's
-visualization query (older quarters), then merged. Timing is inferred: whichever of day D's open gap or day D+1's
-open gap is larger decides "after close" vs "before open"; the reaction is the close-to-close move over that day.
+Historical reactions: report dates come from Yahoo's earnings-calendar query (`sp_earnings`, which carries the
+release time) merged with the Nasdaq earnings-surprise endpoint when Nasdaq answers (it refused scripts with HTTP 403
+from Nov 2026). When Yahoo gives a release time, it decides the reaction session: before 9:30 ET reacts that day,
+after 16:00 ET the next session. Without a time, whichever of day D's open gap or day D+1's open gap is larger decides,
+which can pick a market-wide gap instead. The reaction is the close-to-close move over that session.
 A few dates are duplicated or off; treat the numbers as approximate.
 
 ## 4. Base rate

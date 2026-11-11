@@ -50,6 +50,17 @@ For a contest where only first place pays:
   time), and `06_iv_and_inputs.py` skips any stock without a chain. One run lost the top-ranked name that way and the pick
   changed for no real reason. `05_options_engine.py` now retries each request, makes a gentler second pass, and prints
   `WARN options` for anything still missing (626 of 634 names covered instead of 597).
+- **Silent calendar outage.** In Nov 2026 the Nasdaq calendar API started answering scripts with HTTP 403. The calendar
+  step printed `ERR` per day, wrote an empty file, and every later step ran as if no company reported: the run ended in
+  "no basket passes the rules" with no hint why. `03_earnings_calendar.py` now falls back to Yahoo per day and exits
+  non-zero if the trade window has no dates from either source; `10_pool.py` says why a pool is empty.
+- **Thin histories behind a working source.** The same outage showed that Yahoo's per-ticker `earnings` query had
+  returned as little as one past report for some names (one stock: 1 of 9); Nasdaq had been filling the gap unnoticed. An
+  earlier simulation then sized that stock's earnings jump from a single 4% move. `ehist.py` now uses Yahoo's calendar
+  entity (full history with release times) and stops retrying Nasdaq after a 403.
+- **Guessed reaction days.** Inferring before-open vs after-close from the bigger opening gap picked market-wide gaps on
+  volatile days (a Monday after-close report was scored on Monday's +12% market move instead of Tuesday's +2% reaction).
+  When the release time is known it now decides the reaction session.
 - **Partial bars.** A run started after the open picked up today's half-finished bar as if it were a close. `02_history.py`
   now trims bars after `AS_OF`, and `predict.py` stops if the history does not end at `AS_OF`.
 - **Raw pre-market gaps over-flag.** On a day the Nasdaq-100 was down 2% pre-market, a flat 5% gap rule flagged high-beta
